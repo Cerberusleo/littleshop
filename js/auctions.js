@@ -354,6 +354,19 @@ async function placeBid(itemId) {
     return alert(`出價增幅必須是每口價 ($${item.bidIncrement}) 的整數倍！`);
   }
 
+  // 檢查是否在最後 1 分鐘內出價，若是則自動延長 5 分鐘
+  let newEndTime = item.endTime;
+  const nowTime = new Date().getTime();
+  const endTimeMs = new Date(item.endTime).getTime();
+  const timeDiff = endTimeMs - nowTime;
+  let isExtended = false;
+
+  // <= 60000 毫秒代表 1 分鐘內
+  if (timeDiff > 0 && timeDiff <= 60000) {
+    newEndTime = new Date(endTimeMs + 300000).toISOString(); // 延長 5 分鐘 (300000 毫秒)
+    isExtended = true;
+  }
+
   const { error: bidError } = await sb.from('bids').insert([{
     auction_id: itemId,
     bidder_id: currentUser.id,
@@ -370,13 +383,18 @@ async function placeBid(itemId) {
     current_price: inputAmt,
     highest_bidder_id: currentUser.id,
     highest_bidder_name: currentUser.nickname || '匿名買家',
-    bid_count: (item.bids ? item.bids.length : 0) + 1
+    bid_count: (item.bids ? item.bids.length : 0) + 1,
+    end_time: newEndTime
   }).eq('id', itemId);
 
   if (updateError) {
     alert('更新價格失敗：' + updateError.message);
   } else {
-    alert('🎉 出價成功！');
+    if (isExtended) {
+      alert('🎉 出價成功！\n\n⏱️ 因在最後 1 分鐘內出價，系統已自動將截標時間延長 5 分鐘！');
+    } else {
+      alert('🎉 出價成功！');
+    }
     await logActivity('place_bid', itemId);
     await fetchAuctions();
     openDetailModal(itemId);
