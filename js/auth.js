@@ -11,36 +11,55 @@ async function oauthLogin(provider) {
 async function loadUserProfile(userId) {
   if (!sb) return;
   let uid = userId;
+  let email = '';
+  
   if (typeof uid === 'object' && uid !== null) {
+    email = uid.email || uid.user?.email || '';
     uid = uid.id || uid.user?.id || '';
+  }
+  if (!email) {
+     const { data: sessionData } = await sb.auth.getSession();
+     email = sessionData?.session?.user?.email || '';
   }
   if (!uid || typeof uid !== 'string') return;
 
+  function getMaskedName(mail) {
+    if (!mail || !mail.includes('@')) return '匿名用戶_' + uid.substring(0,4);
+    const [local, domain] = mail.split('@');
+    const f = local.substring(0, 2);
+    const l = local.length > 2 ? local.substring(local.length - 2) : '';
+    return `${f}xxx${l}@${domain}`;
+  }
+
   try {
     const { data, error } = await sb.from('profiles').select('*').eq('id', uid).maybeSingle();
-    if (data) {
-      currentUser = {
-        id: uid,
-        nickname: data.nickname || '',
-        phone: data.phone || '',
-        avatar_url: data.avatar_url || '',
-        isAdmin: Boolean(data.is_admin)
-      };
-      if (!data.nickname) {
-        openProfileModal(true);
-      }
-    } else {
-      currentUser = { id: uid, nickname: '', phone: '', avatar_url: '', isAdmin: false };
-      openProfileModal(true);
+    let dbNickname = data?.nickname;
+    
+    // 如果原本完全沒有設定名稱，或是新用戶，自動生成並儲存
+    if (!dbNickname) {
+       dbNickname = getMaskedName(email);
+       await sb.from('profiles').upsert({
+         id: uid,
+         nickname: dbNickname,
+         phone: data?.phone || '',
+         avatar_url: data?.avatar_url || ''
+       });
     }
+
+    currentUser = {
+      id: uid,
+      nickname: dbNickname,
+      phone: data?.phone || '',
+      avatar_url: data?.avatar_url || '',
+      isAdmin: Boolean(data?.is_admin)
+    };
+    
   } catch (err) {
     console.warn('載入 Profile 發生異常:', err);
-    currentUser = { id: uid, nickname: '', phone: '', avatar_url: '', isAdmin: false };
-    openProfileModal(true);
+    currentUser = { id: uid, nickname: getMaskedName(email), phone: '', avatar_url: '', isAdmin: false };
   }
   if (typeof updateAuthUI === 'function') updateAuthUI();
   
-  // 載入訊息與啟動即時監聽
   if (typeof fetchUserMessages === 'function') await fetchUserMessages();
   if (typeof initRealtimeMessages === 'function') initRealtimeMessages();
 }
@@ -70,12 +89,9 @@ function previewAndCompressAvatar(event) {
 
 async function handleProfileSave(e) {
   e.preventDefault();
-  const nicknameInput = document.getElementById('profileNickname').value.trim();
   const phoneInput = document.getElementById('profilePhone').value.trim();
 
-  if (!nicknameInput) return alert('⚠️ 系統顯示名稱為必填項目，請務必輸入！');
   if (phoneInput && !/^[0-9]{8}$/.test(phoneInput)) return alert('請輸入有效的 8 位數香港電話！');
-  if (currentUser.nickname && currentUser.nickname !== nicknameInput) return alert('用戶名稱已永久鎖定，無法更改！');
 
   const hasBids = auctions.some(a => a.bids.some(b => b.bidderId === currentUser.id));
   if (hasBids && currentUser.phone && currentUser.phone !== phoneInput) {
@@ -85,21 +101,21 @@ async function handleProfileSave(e) {
   const finalAvatar = tempAvatarBase64 || currentUser.avatar_url || '';
   const { error } = await sb.from('profiles').upsert({
     id: currentUser.id,
-    nickname: nicknameInput,
+    nickname: currentUser.nickname, // 保持原本資料庫或自動生成的名字，不從前端抓取
     phone: phoneInput,
     avatar_url: finalAvatar
   });
 
   if (error) return alert('儲存失敗：' + error.message);
 
-  currentUser.nickname = nicknameInput;
   currentUser.phone = phoneInput;
   currentUser.avatar_url = finalAvatar;
 
-  document.getElementById('profileModal').classList.add('hidden');
+  const modal = document.getElementById('profileModal');
+  if(modal) modal.classList.add('hidden');
   updateAuthUI();
   if (typeof renderAuctions === 'function') renderAuctions();
-  alert('✨ 個人資料儲存成功！');
+  alert('✨ 聯絡資料儲存成功！');
 }
 
 async function logout() {

@@ -8,34 +8,31 @@ function closeLoginModal() {
 }
 
 function openProfileModal(isForced) {
-  document.getElementById('profileModal').classList.remove('hidden');
+  const modal = document.getElementById('profileModal');
+  if (modal) modal.classList.remove('hidden');
   const cancelBtn = document.getElementById('cancelProfileBtn');
   const title = document.getElementById('profileModalTitle');
   
   if (isForced) {
-    cancelBtn.classList.add('hidden');
-    title.textContent = '首次登入：完善個人資料 (必填)';
+    if(cancelBtn) cancelBtn.classList.add('hidden');
+    if(title) title.textContent = '完善聯絡資料 (參與競標前必填)';
   } else {
-    cancelBtn.classList.remove('hidden');
-    title.textContent = '修改個人資料';
+    if(cancelBtn) cancelBtn.classList.remove('hidden');
+    if(title) title.textContent = '修改聯絡資料';
   }
   
   const nickInput = document.getElementById('profileNickname');
-  nickInput.value = currentUser?.nickname || '';
-  if (currentUser?.nickname) {
-    nickInput.readOnly = true;
-    nickInput.classList.add('bg-slate-100', 'text-slate-500');
-    document.getElementById('nicknameLockHint')?.classList.remove('hidden');
-  } else {
-    nickInput.readOnly = false;
-    nickInput.classList.remove('bg-slate-100', 'text-slate-500');
-    document.getElementById('nicknameLockHint')?.classList.add('hidden');
-  }
+  if(nickInput) nickInput.value = currentUser?.nickname || '';
 
-  document.getElementById('profilePhone').value = currentUser?.phone || '';
-  document.getElementById('avatarPreviewContainer').innerHTML = currentUser?.avatar_url ? 
-    `<img src="${currentUser.avatar_url}" class="w-full h-full object-cover">` : 
-    (currentUser?.nickname ? currentUser.nickname.charAt(0).toUpperCase() : 'U');
+  const phoneInput = document.getElementById('profilePhone');
+  if(phoneInput) phoneInput.value = currentUser?.phone || '';
+  
+  const avatarContainer = document.getElementById('avatarPreviewContainer');
+  if (avatarContainer) {
+    avatarContainer.innerHTML = currentUser?.avatar_url ? 
+      `<img src="${currentUser.avatar_url}" class="w-full h-full object-cover">` : 
+      (currentUser?.nickname ? currentUser.nickname.charAt(0).toUpperCase() : 'U');
+  }
 }
 
 function openUploadModal() {
@@ -339,12 +336,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const { data: { session } } = await sb.auth.getSession();
       if (session?.user) {
-        await loadUserProfile(session.user.id);
+        await loadUserProfile(session.user);
       }
 
       sb.auth.onAuthStateChange(async (event, session) => {
         if (session?.user) {
-          await loadUserProfile(session.user.id);
+          await loadUserProfile(session.user);
         } else {
           currentUser = null;
           updateAuthUI();
