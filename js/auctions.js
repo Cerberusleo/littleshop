@@ -345,7 +345,7 @@ async function handleCreateAuction(e) {
     description: desc,
     image_url: JSON.stringify(tempImagesBase64),
     is_visible: true,
-    is_biddable: true,
+    is_biddable: false, // 預設不能下標 (鎖定狀態)
     seller_id: currentUser.id,
     seller_name: currentUser.nickname
   };

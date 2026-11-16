@@ -53,11 +53,17 @@ function openProfileModal(isForced) {
 
 function openUploadModal() {
   if (!currentUser?.isAdmin) return alert('權限不足');
-  document.getElementById('uploadModal').classList.remove('hidden');
-  const now = new Date();
-  now.setHours(23, 59, 0, 0);
-  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-  document.getElementById('endTime').value = now.toISOString().slice(0, 16);
+  const modal = document.getElementById('uploadModal');
+  if (modal) modal.classList.remove('hidden');
+  
+  const endInput = document.getElementById('endTime');
+  if (endInput) {
+    // 預設 2026年11月20日 22:00 HKT
+    const targetDate = new Date('2026-11-20T22:00:00+08:00');
+    // Convert to local time format for datetime-local input
+    const localDate = new Date(targetDate.getTime() - (targetDate.getTimezoneOffset() * 60000));
+    endInput.value = localDate.toISOString().slice(0, 16);
+  }
 }
 
 function closeUploadModal() {
@@ -131,6 +137,11 @@ async function openDetailModal(id) {
   activeDetailId = id;
   const item = auctions.find(a => a.id === id);
   if (!item) return;
+  
+  // 修改網址，加上 ?item= 參數，但不重新載入頁面
+  const url = new URL(window.location);
+  url.searchParams.set('item', id);
+  window.history.pushState({}, '', url);
 
   await logActivity('auction_detail', id);
   document.getElementById('detailModal').classList.remove('hidden');
@@ -292,9 +303,15 @@ function updateCountdown(endTimeStr) {
 }
 
 function closeDetailModal() {
-  document.getElementById('detailModal').classList.add('hidden');
+  const modal = document.getElementById('detailModal');
+  if (modal) modal.classList.add('hidden');
   if (detailInterval) clearInterval(detailInterval);
   activeDetailId = null;
+  
+  // 關閉時清除 URL 上的 item 參數
+  const url = new URL(window.location);
+  url.searchParams.delete('item');
+  window.history.pushState({}, '', url);
 }
 
 async function toggleAuctionVisibility() {
@@ -370,6 +387,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await logActivity('home');
   await fetchAuctions();
+  
+  // 檢查獨立連結參數 (例如: ?item=uuid)
+  const urlParams = new URLSearchParams(window.location.search);
+  const itemId = urlParams.get('item');
+  if (itemId) {
+    // 如果 fetchAuctions 完成後有這個 ID，直接打開 Modal
+    setTimeout(() => {
+      openDetailModal(itemId);
+    }, 500); // 稍微延遲確保資料渲染完成
+  }
 });
 
 function openAdminMsgModal() { 
