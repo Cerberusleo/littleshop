@@ -18,14 +18,30 @@ function openProfileModal(isForced) {
     if(title) title.textContent = '完善聯絡資料 (參與競標前必填)';
   } else {
     if(cancelBtn) cancelBtn.classList.remove('hidden');
-    if(title) title.textContent = '修改聯絡資料';
+    if(title) title.textContent = '檢視聯絡資料';
   }
   
   const nickInput = document.getElementById('profileNickname');
   if(nickInput) nickInput.value = currentUser?.nickname || '';
 
   const phoneInput = document.getElementById('profilePhone');
-  if(phoneInput) phoneInput.value = currentUser?.phone || '';
+  if(phoneInput) {
+    phoneInput.value = currentUser?.phone || '';
+    if (currentUser?.phone) {
+      phoneInput.readOnly = true;
+      phoneInput.classList.add('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
+      const hint = document.getElementById('phoneLockHint');
+      if (hint) {
+        hint.textContent = '🔒 電話號碼已鎖定。如需更改，請 IG 私訊管理員。';
+        hint.classList.remove('hidden');
+      }
+    } else {
+      phoneInput.readOnly = false;
+      phoneInput.classList.remove('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
+      const hint = document.getElementById('phoneLockHint');
+      if (hint) hint.classList.add('hidden');
+    }
+  }
   
   const avatarContainer = document.getElementById('avatarPreviewContainer');
   if (avatarContainer) {
