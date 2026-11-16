@@ -144,6 +144,15 @@ function updateAuthUI() {
   }).length : 0;
   if (myBidCountBadge) myBidCountBadge.textContent = myBidCount;
 
+  const myWonCountBadge = document.getElementById('myWonCountBadge');
+  const myWonCount = currentUser ? auctions.filter(a => {
+    if (!currentUser.isAdmin && !a.isVisible) return false;
+    const isEnded = new Date() > new Date(a.endTime);
+    const highestBidderId = a.bids.length > 0 ? a.bids[a.bids.length - 1].bidderId : null;
+    return isEnded && highestBidderId === currentUser.id;
+  }).length : 0;
+  if (myWonCountBadge) myWonCountBadge.textContent = myWonCount;
+
   if (currentUser) {
     if(guestView) guestView.classList.add('hidden');
     if(userView) userView.classList.remove('hidden');

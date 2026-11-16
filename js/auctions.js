@@ -110,10 +110,16 @@ function switchCategory(cat) {
 
 function switchView(view) {
   currentView = view;
-  document.getElementById('tabAll').className = view === 'all' ? 'px-4 py-1.5 rounded-full text-sm font-medium bg-slate-900 text-white shadow-sm transition' : 'px-4 py-1.5 rounded-full text-sm font-medium text-slate-900 shadow-sm transition';
-  document.getElementById('tabMyBids').className = view === 'my_bids' ? 'px-4 py-1.5 rounded-full text-sm font-medium bg-slate-900 text-white shadow-sm transition' : 'px-4 py-1.5 rounded-full text-sm font-medium text-slate-600 hover:bg-slate-100 transition';
+  const activeClass = 'px-4 py-1.5 rounded-full text-sm font-medium bg-slate-900 text-white shadow-sm transition whitespace-nowrap';
+  const inactiveClass = 'px-4 py-1.5 rounded-full text-sm font-medium text-slate-600 hover:bg-slate-100 transition whitespace-nowrap';
+
+  document.getElementById('tabAll').className = view === 'all' ? activeClass : inactiveClass;
+  const tabMyBids = document.getElementById('tabMyBids');
+  if(tabMyBids) tabMyBids.className = view === 'my_bids' ? activeClass : inactiveClass;
+  const tabMyWonBids = document.getElementById('tabMyWonBids');
+  if(tabMyWonBids) tabMyWonBids.className = view === 'my_won_bids' ? activeClass : inactiveClass;
   
-  if (view === 'my_bids') {
+  if (view === 'my_bids' || view === 'my_won_bids') {
     // 重置所有過濾器，確保能看到完整的參標記錄
     currentCategory = 'all';
     const statusAll = document.querySelector('input[name="statusFilter"][value="all"]');
@@ -157,6 +163,11 @@ function renderAuctions() {
       if (!currentUser) return false;
       const hasBid = item.bids.some(b => b.bidderId === currentUser.id);
       if (!hasBid) return false;
+    } else if (currentView === 'my_won_bids') {
+      if (!currentUser) return false;
+      const isEnded = new Date() > new Date(item.endTime);
+      const highestBidderId = item.bids.length > 0 ? item.bids[item.bids.length - 1].bidderId : null;
+      if (!isEnded || highestBidderId !== currentUser.id) return false;
     }
     if (keyword && !item.title.toLowerCase().includes(keyword) && !item.desc.toLowerCase().includes(keyword)) return false;
     
@@ -205,7 +216,16 @@ function renderAuctions() {
                           '<span class="absolute top-2 left-2 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm">競標中</span>';
       const catLabel = item.subCategory ? `${item.category} · ${item.subCategory}` : item.category;
       const highestBidderId = item.bids.length > 0 ? item.bids[item.bids.length - 1].bidderId : null;
-      const myBidStatus = (currentView === 'my_bids' && currentUser) ? (highestBidderId === currentUser.id ? `<span class="absolute top-2 right-2 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm z-10"><i class="fa-solid fa-crown mr-1"></i>領先中</span>` : `<span class="absolute top-2 right-2 bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm z-10">已落後</span>`) : '';
+      let myBidStatus = '';
+      if (currentUser && (currentView === 'my_bids' || currentView === 'my_won_bids')) {
+          if (isEnded && highestBidderId === currentUser.id) {
+              myBidStatus = `<span class="absolute top-2 right-2 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm z-10"><i class="fa-solid fa-trophy mr-1"></i>已得標</span>`;
+          } else if (highestBidderId === currentUser.id) {
+              myBidStatus = `<span class="absolute top-2 right-2 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm z-10"><i class="fa-solid fa-crown mr-1"></i>領先中</span>`;
+          } else {
+              myBidStatus = `<span class="absolute top-2 right-2 bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm z-10">已落後</span>`;
+          }
+      }
       return `
         <div onclick="openDetailModal('${item.id}')" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden cursor-pointer hover:shadow-md transition group flex flex-col justify-between">
           <div class="relative aspect-square bg-slate-100 overflow-hidden">
@@ -236,7 +256,16 @@ function renderAuctions() {
       const isEnded = new Date() > new Date(item.endTime);
       const catLabel = item.subCategory ? `${item.category} / ${item.subCategory}` : item.category;
       const highestBidderId = item.bids.length > 0 ? item.bids[item.bids.length - 1].bidderId : null;
-      const myBidStatus = (currentView === 'my_bids' && currentUser) ? (highestBidderId === currentUser.id ? `<span class="absolute top-1 right-1 bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm z-10"><i class="fa-solid fa-crown mr-0.5"></i>領先</span>` : `<span class="absolute top-1 right-1 bg-rose-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm z-10">落後</span>`) : '';
+      let myBidStatus = '';
+      if (currentUser && (currentView === 'my_bids' || currentView === 'my_won_bids')) {
+          if (isEnded && highestBidderId === currentUser.id) {
+              myBidStatus = `<span class="absolute top-1 right-1 bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm z-10"><i class="fa-solid fa-trophy mr-0.5"></i>已得標</span>`;
+          } else if (highestBidderId === currentUser.id) {
+              myBidStatus = `<span class="absolute top-1 right-1 bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm z-10"><i class="fa-solid fa-crown mr-0.5"></i>領先</span>`;
+          } else {
+              myBidStatus = `<span class="absolute top-1 right-1 bg-rose-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm z-10">落後</span>`;
+          }
+      }
       return `
         <div onclick="openDetailModal('${item.id}')" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 sm:p-4 cursor-pointer hover:shadow-md transition flex items-center space-x-4">
           <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-slate-100 overflow-hidden shrink-0 relative">
