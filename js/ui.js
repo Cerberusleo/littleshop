@@ -58,8 +58,8 @@ function openUploadModal() {
   
   const endInput = document.getElementById('endTime');
   if (endInput) {
-    // 預設 2026年11月20日 22:00 HKT
-    const targetDate = new Date('2026-11-20T22:00:00+08:00');
+    // 預設 2026年11月22日 22:00 HKT
+    const targetDate = new Date('2026-11-22T22:00:00+08:00');
     // Convert to local time format for datetime-local input
     const localDate = new Date(targetDate.getTime() - (targetDate.getTimezoneOffset() * 60000));
     endInput.value = localDate.toISOString().slice(0, 16);
