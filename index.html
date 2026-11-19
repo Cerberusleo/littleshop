@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>一間小店 | 收藏限時拍賣購買</title>
+  <link rel="icon" href="./logo.png" type="image/png">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -34,6 +35,9 @@
       </div>
 
       <div class="flex items-center space-x-2 shrink-0">
+        <button onclick="openRulesModal()" class="text-xs font-bold text-slate-600 hover:text-amber-600 bg-slate-100 hover:bg-amber-50 px-2.5 py-1.5 rounded-full transition flex items-center shrink-0">
+          <i class="fa-solid fa-book-open text-amber-500 mr-1"></i><span class="hidden sm:inline">拍賣規則</span><span class="sm:hidden">規則</span>
+        </button>
         <div id="guestAuthView" class="flex items-center space-x-2">
           <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
             <span class="w-2 h-2 rounded-full bg-emerald-500 mr-1.5"></span>訪客觀標中
@@ -75,13 +79,13 @@
   </header>
 
   <!-- ==================== [全局固定工具列 (公告 + 分類 + 管理員)] ==================== -->
-  <div class="sticky top-16 z-20 bg-slate-50 flex flex-col shadow-sm">
+  <div class="md:sticky md:top-16 z-20 bg-slate-50 flex flex-col shadow-sm">
     <div class="bg-amber-50 border-b border-amber-100 py-1.5 sm:py-2 text-xs sm:text-sm text-amber-900 flex items-center z-20">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex items-center">
         <i class="fa-solid fa-bullhorn text-amber-500 mr-2 shrink-0"></i>
         <div class="marquee-container">
           <div class="marquee-text font-medium tracking-wide">
-            目前還未正式上線，可以先追蹤 <a href="https://www.instagram.com/one_little_shop" target="_blank" class="text-rose-500 font-bold hover:text-rose-600 underline mx-1">IG</a> 看最新情況 ✨
+            🎉 公測預熱中！11月22日 22:00 截標｜最後 1 分鐘出價自動延長 5 分鐘｜追蹤 <a href="https://www.instagram.com/one_little_shop" target="_blank" class="text-rose-500 font-bold hover:text-rose-600 underline mx-1">IG</a> 接收開標通知 ✨
           </div>
         </div>
       </div>
@@ -89,6 +93,12 @@
 
     <div class="bg-white border-b border-slate-200 shadow-sm relative z-10">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col gap-3">
+        <!-- 手機版搜尋欄 -->
+        <div class="md:hidden relative w-full">
+          <input type="text" id="mobileSearchInput" oninput="syncSearch(this.value)" placeholder="搜尋拍賣品（例如：Chiikawa、龍珠）..." 
+            class="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-full text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 bg-slate-50">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-2.5 text-slate-400 text-xs"></i>
+        </div>
         <div class="flex flex-wrap items-center justify-between gap-4">
           <div class="flex flex-wrap gap-2">
             <button id="tabAll" onclick="switchView('all')" class="px-4 py-1.5 rounded-full text-sm font-medium bg-slate-900 text-white shadow-sm transition whitespace-nowrap">
@@ -106,7 +116,7 @@
           </div>
         </div>
         <div class="flex flex-col gap-3 pt-2 border-t border-slate-100">
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between gap-2">
             <div class="flex items-center space-x-2">
               <span class="text-slate-400 text-xs font-medium"><i class="fa-solid fa-arrow-down-a-z mr-1"></i>排序:</span>
               <select id="sortSelect" onchange="changeSort()" class="text-xs border border-slate-200 rounded-md px-2 py-1 bg-slate-50 text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500">
@@ -115,13 +125,16 @@
                 <option value="price_asc">出價：由低至高</option>
                 <option value="price_desc">出價：由高至低</option>
               </select>
+              <button onclick="toggleMobileFilters()" class="sm:hidden text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-md border border-slate-200 flex items-center">
+                <i class="fa-solid fa-sliders mr-1 text-amber-500"></i>篩選
+              </button>
             </div>
             <div class="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
               <button id="layoutGridBtn" onclick="changeLayout('grid')" class="p-1.5 px-2.5 rounded-md bg-white shadow-sm text-slate-700 text-sm transition"><i class="fa-solid fa-border-all"></i></button>
               <button id="layoutListBtn" onclick="changeLayout('list')" class="p-1.5 px-2.5 rounded-md text-slate-400 hover:text-slate-700 text-sm transition"><i class="fa-solid fa-list"></i></button>
             </div>
           </div>
-          <div class="flex flex-wrap items-center gap-x-6 gap-y-3 text-xs bg-slate-50/50 p-2 rounded-lg border border-slate-100">
+          <div id="advancedFilterPanel" class="hidden sm:flex flex-wrap items-center gap-x-6 gap-y-3 text-xs bg-slate-50/50 p-2 rounded-lg border border-slate-100">
             <div class="flex items-center space-x-3">
               <span class="text-slate-500 font-bold"><i class="fa-solid fa-filter mr-1"></i>狀態:</span>
               <label class="flex items-center space-x-1 cursor-pointer"><input type="radio" name="statusFilter" value="all" checked onchange="renderAuctions()" class="accent-amber-500 w-3.5 h-3.5"><span>全部</span></label>
@@ -130,9 +143,9 @@
             </div>
             <div class="flex items-center space-x-2">
               <span class="text-slate-500 font-bold"><i class="fa-solid fa-coins mr-1"></i>出價範圍:</span>
-              <input type="number" id="minPriceFilter" value="0" onclick="this.value=''; renderAuctions()" oninput="renderAuctions()" class="w-16 px-1.5 py-1 border border-slate-200 rounded text-center bg-white shadow-sm" placeholder="最小">
+              <input type="number" id="minPriceFilter" value="" oninput="renderAuctions()" class="w-16 px-1.5 py-1 border border-slate-200 rounded text-center bg-white shadow-sm" placeholder="最低">
               <span class="text-slate-400">-</span>
-              <input type="number" id="maxPriceFilter" value="999999" onclick="this.value=''; renderAuctions()" oninput="renderAuctions()" class="w-20 px-1.5 py-1 border border-slate-200 rounded text-center bg-white shadow-sm" placeholder="最大">
+              <input type="number" id="maxPriceFilter" value="" oninput="renderAuctions()" class="w-20 px-1.5 py-1 border border-slate-200 rounded text-center bg-white shadow-sm" placeholder="最高">
             </div>
             <div class="flex items-center space-x-2">
               <span class="text-slate-500 font-bold"><i class="fa-regular fa-clock mr-1"></i>截標倒數:</span>
@@ -301,7 +314,7 @@
         <h3 class="text-lg font-bold text-slate-900">登入參與競標</h3>
         <button onclick="closeLoginModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
-      <p class="text-xs text-slate-500 mb-4">首次登入僅需設定顯示名稱與聯絡電話，平台不會收集任何其他敏感個人數據。</p>
+      <p class="text-xs text-slate-500 mb-4">登入後系統會自動以電郵生成匿名名稱，只需綁定聯絡電話即可參與競標，平台絕不公開您的個人資料。</p>
       
       <div class="space-y-2.5">
         <button onclick="oauthLogin('google')" class="w-full flex items-center justify-center space-x-3 py-2.5 px-4 border border-slate-300 rounded-xl hover:bg-slate-50 font-medium text-sm text-slate-700 shadow-sm transition">
@@ -510,7 +523,12 @@
               <i class="fa-regular fa-clock"></i>
               <span id="detailCountdownText">計算中...</span>
             </div>
-            <button onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            <div class="flex items-center space-x-2">
+              <button onclick="copyItemLink()" class="text-xs font-bold text-slate-600 hover:text-amber-600 bg-slate-100 hover:bg-amber-50 px-2.5 py-1 rounded-full transition flex items-center">
+                <i class="fa-solid fa-link mr-1"></i>分享
+              </button>
+              <button onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
           </div>
 
           <div class="my-4 bg-slate-50 rounded-xl p-4 border border-slate-200/80">
@@ -536,10 +554,41 @@
     </div>
   </div>
 
-  <script src="./js/config.js?v=1794996985"></script>
-  <script src="./js/analytics.js?v=1794996985"></script>
-  <script src="./js/auth.js?v=1794996985"></script>
-  <script src="./js/auctions.js?v=1794996985"></script>
-  <script src="./js/ui.js?v=1794996985"></script>
+  <!-- ==================== [拍賣規則 Modal] ==================== -->
+  <div id="rulesModal" onclick="if(event.target === this) closeRulesModal()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-md w-full p-6 shadow-2xl modal-enter max-h-[85vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+        <h3 class="text-base font-bold text-slate-900"><i class="fa-solid fa-book-open text-amber-500 mr-2"></i>拍賣規則與交收須知</h3>
+        <button onclick="closeRulesModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div class="space-y-3.5 text-xs text-slate-600 leading-relaxed">
+        <div class="bg-amber-50/70 p-3 rounded-xl border border-amber-100">
+          <h4 class="font-bold text-amber-900 mb-1"><i class="fa-solid fa-stopwatch mr-1"></i>防秒殺自動延長機制</h4>
+          <p>若於截標前<strong>最後 1 分鐘內</strong>有新出價，系統會自動將該貨品截標時間<strong>延長 5 分鐘</strong>，直至無人再出價為止，確保公平競投。</p>
+        </div>
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+          <h4 class="font-bold text-slate-800 mb-1"><i class="fa-solid fa-hand-holding-dollar mr-1"></i>0% 手續費與出價規則</h4>
+          <p>本平台不收取任何買家手續費。出價金額須為底價或以上，並按每口價的整數倍遞增。</p>
+        </div>
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+          <h4 class="font-bold text-slate-800 mb-1"><i class="fa-solid fa-truck-fast mr-1"></i>交收與付款方式</h4>
+          <p>得標後官方會透過站內訊息（右上角鈴鐺）或 WhatsApp 聯絡確認。支援<strong>葵興 / 葵芳 / 荃灣地鐵站面交</strong>（現金 / PayMe / FPS）或<strong>順豐到付</strong>。</p>
+        </div>
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+          <h4 class="font-bold text-slate-800 mb-1"><i class="fa-solid fa-user-shield mr-1"></i>私隱保障</h4>
+          <p>系統自動以電郵生成匿名代號（如 <code>abxxx56@gmail.com</code>）顯示於出價紀錄。綁定之聯絡電話僅供得標後安排交收之用，絕不對外公開。</p>
+        </div>
+      </div>
+      <div class="mt-5">
+        <button onclick="closeRulesModal()" class="w-full bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-xl text-xs font-bold transition">我明白了</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./js/config.js?v=1795083272"></script>
+  <script src="./js/analytics.js?v=1795083272"></script>
+  <script src="./js/auth.js?v=1795083272"></script>
+  <script src="./js/auctions.js?v=1795083272"></script>
+  <script src="./js/ui.js?v=1795083272"></script>
 </body>
 </html>

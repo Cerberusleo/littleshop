@@ -1,3 +1,37 @@
+function openRulesModal() {
+  document.getElementById('rulesModal')?.classList.remove('hidden');
+}
+
+function closeRulesModal() {
+  document.getElementById('rulesModal')?.classList.add('hidden');
+}
+
+function toggleMobileFilters() {
+  const panel = document.getElementById('advancedFilterPanel');
+  if (panel) {
+    panel.classList.toggle('hidden');
+    panel.classList.toggle('flex');
+  }
+}
+
+function copyItemLink() {
+  const url = window.location.href;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(() => {
+      alert('✅ 已複製此商品專屬連結！可直接貼上分享給朋友或 IG。');
+    }).catch(() => {
+      prompt('請手動複製以下連結：', url);
+    });
+  } else {
+    prompt('請手動複製以下連結：', url);
+  }
+}
+
+function setQuickBid(amount) {
+  const input = document.getElementById('bidAmountInput');
+  if (input) input.value = amount;
+}
+
 // ==================== [模塊：UI & Modals] ====================
 function openLoginModal() {
   document.getElementById('loginModal').classList.remove('hidden');
@@ -163,8 +197,8 @@ async function openDetailModal(id) {
 
   const isEnded = new Date() > new Date(item.endTime);
   const badge = document.getElementById('detailStatusBadge');
-  badge.textContent = !item.isVisible ? '已隱藏' : (isEnded ? '已截標' : (!item.isBiddable ? '已鎖定' : '競標中'));
-  badge.className = `absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-bold z-20 text-white ${!item.isVisible ? 'bg-slate-800' : (isEnded ? 'bg-rose-500' : (!item.isBiddable ? 'bg-slate-600' : 'bg-amber-500'))}`;
+  badge.textContent = !item.isVisible ? '已隱藏' : (isEnded ? '已截標' : (!item.isBiddable ? '即將開標' : '競標中'));
+  badge.className = `absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-bold z-20 text-white ${!item.isVisible ? 'bg-slate-800' : (isEnded ? 'bg-rose-500' : (!item.isBiddable ? 'bg-indigo-600' : 'bg-amber-500'))}`;
 
   const adminGroup = document.getElementById('adminActionGroup');
   if (currentUser?.isAdmin) {
@@ -206,15 +240,22 @@ async function openDetailModal(id) {
   } else if (isEnded) {
     actionArea.innerHTML = `<div class="text-center py-3 bg-slate-100 text-slate-500 rounded-xl font-bold text-sm">本場拍賣已結標</div>`;
   } else if (!item.isBiddable) {
-    actionArea.innerHTML = `<div class="text-center py-3 bg-amber-50 text-amber-800 rounded-xl font-bold text-sm">管理員已暫停本場競標</div>`;
+    actionArea.innerHTML = `<div class="text-center py-3 px-3 bg-indigo-50 text-indigo-800 border border-indigo-100 rounded-xl font-bold text-xs sm:text-sm">✨ 預熱展示中，即將開放出價（可先追蹤 IG 接收開標通知）</div>`;
   } else {
     const nextMin = item.bids.length === 0 ? item.startPrice : (item.currentPrice + item.bidIncrement);
+    const inc = item.bidIncrement;
     actionArea.innerHTML = `
+      <div class="flex flex-wrap gap-1.5 mb-2">
+        <button type="button" onclick="setQuickBid(${nextMin})" class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition">最低 $${nextMin}</button>
+        <button type="button" onclick="setQuickBid(${nextMin + inc})" class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition">+1口 ($${nextMin + inc})</button>
+        <button type="button" onclick="setQuickBid(${nextMin + inc * 2})" class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition">+2口 ($${nextMin + inc * 2})</button>
+        <button type="button" onclick="setQuickBid(${nextMin + inc * 5})" class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition">+5口 ($${nextMin + inc * 5})</button>
+      </div>
       <div class="flex items-center space-x-2">
-        <input type="number" id="bidAmountInput" min="${nextMin}" step="${item.bidIncrement}" value="${nextMin}" class="flex-1 px-4 py-2.5 border border-slate-300 rounded-xl text-base font-bold text-slate-900 bg-white">
+        <input type="number" id="bidAmountInput" min="${nextMin}" step="${inc}" value="${nextMin}" class="flex-1 px-4 py-2.5 border border-slate-300 rounded-xl text-base font-bold text-slate-900 bg-white">
         <button onclick="placeBid('${item.id}')" class="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-sm transition shrink-0">確認出價</button>
       </div>
-      <p class="text-[10px] text-slate-400 mt-1.5">最低出價 $${nextMin}，且只能以每口價 ($${item.bidIncrement}) 的倍數遞增</p>
+      <p class="text-[10px] text-slate-400 mt-1.5">最低出價 $${nextMin}，每口 +$${inc}｜最後 1 分鐘出價自動延長 5 分鐘</p>
     `;
   }
 
@@ -322,6 +363,7 @@ async function toggleAuctionVisibility() {
   const { error } = await sb.from('auctions').update({ is_visible: newVisible }).eq('id', activeDetailId);
   if (error) return alert('更新狀態失敗：' + error.message);
   await fetchAuctions();
+  initRealtimeAuctions();
   openDetailModal(activeDetailId);
 }
 
@@ -823,4 +865,73 @@ function initRealtimeMessages() {
     .subscribe((status) => {
       console.log('Realtime 連線狀態:', status);
     });
+}
+
+window.auctionSubscription = null;
+
+function initRealtimeAuctions() {
+  if (!sb || window.auctionSubscription) return;
+  window.auctionSubscription = sb.channel('public-auctions-live')
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'auctions' },
+      async (payload) => {
+        await fetchAuctions();
+        if (activeDetailId && payload.new && payload.new.id === activeDetailId) {
+          refreshActiveDetailSilently(activeDetailId);
+        }
+      }
+    )
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'bids' },
+      async (payload) => {
+        await fetchAuctions();
+        if (activeDetailId && payload.new && payload.new.auction_id === activeDetailId) {
+          refreshActiveDetailSilently(activeDetailId);
+        }
+      }
+    )
+    .subscribe();
+}
+
+function refreshActiveDetailSilently(id) {
+  const item = auctions.find(a => a.id === id);
+  if (!item || activeDetailId !== id) return;
+
+  document.getElementById('detailPriceLabel').textContent = item.bids.length > 0 ? '目前出價' : '起標價格';
+  document.getElementById('detailCurrentPrice').textContent = '$' + (item.bids.length > 0 ? item.currentPrice : item.startPrice);
+  document.getElementById('detailBidCount').textContent = item.bids.length;
+  const highestBidder = item.bids.length > 0 ? item.bids[item.bids.length - 1].bidderName : '暫無出價';
+  document.getElementById('detailHighestBidder').textContent = '領先者：' + highestBidder;
+
+  const historyList = document.getElementById('bidHistoryList');
+  if (historyList) {
+    historyList.innerHTML = item.bids.length === 0 ? '<div class="text-slate-400 text-center py-4 text-xs">暫無出價紀錄</div>' :
+      item.bids.slice().reverse().map((b, i) => `
+        <div class="flex justify-between items-center bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
+          <div class="flex items-center space-x-2">
+            <span class="w-5 h-5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px] flex items-center justify-center">${item.bids.length - i}</span>
+            <span class="font-bold text-slate-800 text-xs">${b.bidderName}</span>
+          </div>
+          <div class="text-right">
+            <span class="font-extrabold text-amber-600 text-xs">$${b.amount}</span>
+            <span class="text-[10px] text-slate-400 block">${new Date(b.time).toLocaleString()}</span>
+          </div>
+        </div>
+      `).join('');
+  }
+
+  // 更新倒數計時器目標（處理防秒殺自動延長後的新時間）
+  if (detailInterval) clearInterval(detailInterval);
+  updateCountdown(item.endTime);
+  detailInterval = setInterval(() => updateCountdown(item.endTime), 1000);
+
+  // 更新最低出價輸入框的最小值
+  const nextMin = item.bids.length === 0 ? item.startPrice : (item.currentPrice + item.bidIncrement);
+  const bidInput = document.getElementById('bidAmountInput');
+  if (bidInput && Number(bidInput.value) < nextMin) {
+    bidInput.min = nextMin;
+    bidInput.value = nextMin;
+  }
 }

@@ -124,10 +124,11 @@ function switchView(view) {
     currentCategory = 'all';
     const statusAll = document.querySelector('input[name="statusFilter"][value="all"]');
     if (statusAll) statusAll.checked = true;
-    if (document.getElementById('minPriceFilter')) document.getElementById('minPriceFilter').value = '0';
-    if (document.getElementById('maxPriceFilter')) document.getElementById('maxPriceFilter').value = '999999';
+    if (document.getElementById('minPriceFilter')) document.getElementById('minPriceFilter').value = '';
+    if (document.getElementById('maxPriceFilter')) document.getElementById('maxPriceFilter').value = '';
     if (document.getElementById('timeFilter')) document.getElementById('timeFilter').value = 'all';
     if (document.getElementById('searchInput')) document.getElementById('searchInput').value = '';
+    if (document.getElementById('mobileSearchInput')) document.getElementById('mobileSearchInput').value = '';
     renderCategories();
   }
   renderAuctions();
@@ -212,7 +213,7 @@ function renderAuctions() {
       const isEnded = new Date() > new Date(item.endTime);
       const statusBadge = !item.isVisible ? '<span class="absolute top-2 left-2 bg-slate-900/80 text-white text-[10px] font-bold px-2 py-0.5 rounded-md backdrop-blur-sm">已隱藏</span>' :
                           isEnded ? '<span class="absolute top-2 left-2 bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm">已截標</span>' : 
-                          !item.isBiddable ? '<span class="absolute top-2 left-2 bg-slate-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm">已鎖定</span>' :
+                          !item.isBiddable ? '<span class="absolute top-2 left-2 bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm">即將開標</span>' :
                           '<span class="absolute top-2 left-2 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm">競標中</span>';
       const catLabel = item.subCategory ? `${item.category} · ${item.subCategory}` : item.category;
       const highestBidderId = item.bids.length > 0 ? item.bids[item.bids.length - 1].bidderId : null;
@@ -241,9 +242,14 @@ function renderAuctions() {
               </div>
               <h3 class="text-xs sm:text-sm font-bold text-slate-900 line-clamp-1">${item.title}</h3>
             </div>
-            <div class="mt-3 pt-2 border-t border-slate-100 flex items-baseline justify-between">
-              <span class="text-[10px] text-slate-400">${item.bids.length > 0 ? `目前出價 (${item.bids.length}口)` : '起標價格'}</span>
-              <span class="text-sm sm:text-base font-extrabold text-amber-600">$${item.bids.length > 0 ? item.currentPrice : item.startPrice}</span>
+            <div class="mt-2 pt-2 border-t border-slate-100">
+              <div class="flex items-baseline justify-between">
+                <span class="text-[10px] text-slate-400">${item.bids.length > 0 ? `目前出價 (${item.bids.length}口)` : '起標價格'}</span>
+                <span class="text-sm sm:text-base font-extrabold text-amber-600">$${item.bids.length > 0 ? item.currentPrice : item.startPrice}</span>
+              </div>
+              <div class="text-[10px] mt-1 ${isEnded ? 'text-rose-400' : 'text-slate-400'} flex items-center">
+                <i class="fa-regular fa-clock mr-1"></i>${isEnded ? '已截標' : new Date(item.endTime).toLocaleString('zh-HK', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false}) + ' 截標'}
+              </div>
             </div>
           </div>
         </div>
@@ -276,7 +282,7 @@ function renderAuctions() {
             <div class="flex items-center space-x-2 mb-1">
               <span class="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">${catLabel}</span>
               <span class="text-[10px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded"><i class="fa-solid fa-location-dot mr-0.5"></i>${item.location}</span>
-              <span class="text-[10px] ${!item.isVisible ? 'text-slate-500' : isEnded ? 'text-rose-500' : !item.isBiddable ? 'text-slate-600' : 'text-emerald-600'} font-bold">${!item.isVisible ? '已隱藏' : (isEnded ? '已截標' : !item.isBiddable ? '已鎖定' : '競標中')}</span>
+              <span class="text-[10px] ${!item.isVisible ? 'text-slate-500' : isEnded ? 'text-rose-500' : !item.isBiddable ? 'text-slate-600' : 'text-emerald-600'} font-bold">${!item.isVisible ? '已隱藏' : (isEnded ? '已截標' : !item.isBiddable ? '即將開標' : '競標中')}</span>
             </div>
             <h3 class="text-sm sm:text-base font-bold text-slate-900 truncate">${item.title}</h3>
             <p class="text-xs text-slate-500 truncate mt-0.5">${item.desc || '無描述'}</p>
@@ -284,6 +290,7 @@ function renderAuctions() {
           <div class="text-right shrink-0 pl-2">
             <span class="text-[10px] text-slate-400 block">${item.bids.length > 0 ? '目前出價' : '起標價格'}</span>
             <span class="text-base sm:text-lg font-extrabold text-amber-600">$${item.bids.length > 0 ? item.currentPrice : item.startPrice}</span>
+            <span class="text-[10px] block mt-0.5 ${isEnded ? 'text-rose-400' : 'text-slate-400'}">${isEnded ? '已截標' : new Date(item.endTime).toLocaleString('zh-HK', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false})}</span>
           </div>
         </div>
       `;
@@ -428,4 +435,11 @@ async function placeBid(itemId) {
     await fetchAuctions();
     openDetailModal(itemId);
   }
+}
+
+
+function syncSearch(val) {
+  const desk = document.getElementById('searchInput');
+  if (desk) desk.value = val;
+  renderAuctions();
 }
