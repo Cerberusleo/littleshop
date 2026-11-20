@@ -363,7 +363,6 @@ async function toggleAuctionVisibility() {
   const { error } = await sb.from('auctions').update({ is_visible: newVisible }).eq('id', activeDetailId);
   if (error) return alert('更新狀態失敗：' + error.message);
   await fetchAuctions();
-  initRealtimeAuctions();
   openDetailModal(activeDetailId);
 }
 
@@ -429,6 +428,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await logActivity('home');
   await fetchAuctions();
+  initRealtimeAuctions();
   
   // 檢查獨立連結參數 (例如: ?item=uuid)
   const urlParams = new URLSearchParams(window.location.search);
